@@ -1,12 +1,12 @@
 package com.stock.service;
 
 import com.stock.config.AppConfig;
-import com.stock.model.Company;
-import com.stock.model.StockInfo;
+import com.stock.dto.CompanyDto;
+import com.stock.dto.StockInfoDto;
 import com.stock.parser.CompanyParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,79 +14,59 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class StockLoaderServiceImpl implements StockLoaderService {
 
-    private Logger logger = LoggerFactory.getLogger(StockLoaderServiceImpl.class);
-
-    @Autowired
-    private AppConfig appConfig;
-
-    @Autowired
-    private AsyncStockLoaderHelper asyncStockLoaderHelper;
-
-    private List<Company> companyList;
+    private final AppConfig appConfig;
+    private final AsyncStockLoaderHelper asyncStockLoaderHelper;
 
 
-    @Override
-    public void stockInfoCollectorHandler(List<Company> companies) throws InterruptedException {
-        List<CompletableFuture<StockInfo>> futureList = new ArrayList<>();
+    @SneakyThrows
+    public List<StockInfoDto> stockInfoCollectorHandler(List<CompanyDto> companies) {
+        List<CompletableFuture<StockInfoDto>> futureList = new ArrayList<>();
 
-        long start = System.currentTimeMillis();
-
-        for (Company company : companies) {
+        for (CompanyDto company : companies) {
             futureList.add(asyncStockLoaderHelper.getStockInfo(company));
         }
         CompletableFuture.allOf(
                 futureList.toArray(new CompletableFuture[futureList.size()]))
                 .exceptionally(ex -> {
-                    logger.error(ex.getMessage());
+                    log.error(ex.getMessage());
                     return null;
                 })
                 .join();
 
-        Map<Boolean, List<CompletableFuture<StockInfo>>> collectedStockInfoMap =
+        Map<Boolean, List<CompletableFuture<StockInfoDto>>> collectedStockInfoMap =
                 futureList.stream().collect(
                         Collectors.partitioningBy(
                                 CompletableFuture::isCompletedExceptionally));
 
 
-        // TODO rudimentary get ???
-        List<StockInfo> stockInfoList = collectedStockInfoMap.get(false).stream().map(
-                el -> {
-                    try {
-                        return el.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                    return null;
-                }
+        log.info("StockInfo collection was loaded.");
+        return collectedStockInfoMap.get(false).stream().map(
+                s -> s.join()
         ).collect(Collectors.toList());
-
-        stockInfoList.stream().forEach(stockInfo -> logger.info("StockInfo: "+ stockInfo.getCompanyName()));
-
-        logger.info("Elapsed time: " + (System.currentTimeMillis() - start));
 
     }
 
     @Override
-    public List<Company> loadCompanies() {
-        logger.info("Starting load stock data...");
-
+    public List<CompanyDto> loadCompanies() {
+        log.info("Starting load stock data...");
         RestTemplate restTemplate = new RestTemplate();
 
         String jsonCompanies = restTemplate.getForObject(appConfig.getCompaniesURI(), String.class);
-        logger.info("Companies loaded: "+ jsonCompanies.length());
+        log.info("Companies loaded: "+ jsonCompanies.length());
 
-        companyList = CompanyParser.parseCompanies(jsonCompanies);
-        logger.info("Companies were parsed: "+companyList.size());
 
-        return companyList;
+
+        List<CompanyDto> companyDtoList = CompanyParser.parseCompanies(jsonCompanies);
+        log.info("Companies were parsed: "+ companyDtoList.size());
+
+        // return enabled companies
+        return companyDtoList.stream().filter(s -> s.getIsEnabled()).collect(Collectors.toList());
     }
-
-
-
 }

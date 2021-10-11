@@ -1,12 +1,10 @@
 package com.stock.service;
 
 import com.stock.config.AppConfig;
-import com.stock.model.Company;
-import com.stock.model.StockInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import com.stock.dto.CompanyDto;
+import com.stock.dto.StockInfoDto;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -14,24 +12,21 @@ import org.springframework.web.client.RestTemplate;
 import java.util.concurrent.CompletableFuture;
 
 @Component
+@Slf4j
+@RequiredArgsConstructor
 public class AsyncStockLoaderHelper {
 
     private final AppConfig appConfig;
-    private Logger logger = LoggerFactory.getLogger(AsyncStockLoaderHelper.class);
     private final RestTemplate restTemplate;
 
-    public AsyncStockLoaderHelper(RestTemplateBuilder restTemplateBuilder, AppConfig appConfig) {
-        this.restTemplate = restTemplateBuilder.build();
-        this.appConfig = appConfig;
-    }
-
     @Async("threadPoolCustomTaskExecutor")
-    public CompletableFuture<StockInfo> getStockInfo(Company company) throws InterruptedException {
-        logger.info("Looking up at " + Thread.currentThread().getName() + " : "+ company.getSymbol());
+    public CompletableFuture<StockInfoDto> getStockInfo(CompanyDto companyDto) {
+        log.info("Looking up at {} : {}", Thread.currentThread().getName(), companyDto.getSymbol());
         String url = String.format(appConfig.getStockInfoURI(),
-                company.getSymbol());
-        StockInfo result = restTemplate.getForObject(url, StockInfo.class);
-        return CompletableFuture.completedFuture(result);
-    }
+                companyDto.getSymbol());
+        StockInfoDto stockInfoDto = restTemplate.getForObject(url, StockInfoDto.class);
 
+        companyDto.setStockInfo(stockInfoDto);
+        return CompletableFuture.completedFuture(stockInfoDto);
+    }
 }

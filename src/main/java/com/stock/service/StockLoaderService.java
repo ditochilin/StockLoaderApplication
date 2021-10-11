@@ -1,12 +1,11 @@
 package com.stock.service;
 
-import com.stock.model.Company;
+import com.stock.dto.CompanyDto;
+import com.stock.dto.StockInfoDto;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public interface StockLoaderService {
-    List<Company> loadCompanies();
-
-    void stockInfoCollectorHandler(List<Company> companies) throws InterruptedException, ExecutionException;
+    List<CompanyDto> loadCompanies();
+    List<StockInfoDto> stockInfoCollectorHandler(List<CompanyDto> companies);
 }

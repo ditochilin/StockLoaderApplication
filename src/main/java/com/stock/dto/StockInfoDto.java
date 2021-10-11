@@ -1,14 +1,19 @@
-package com.stock.model;
+package com.stock.dto;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Setter;
+import org.springframework.data.annotation.Id;
 
 @Data
-public class StockInfo {
-
+@Setter
+public class StockInfoDto {
+    @Id
+    private String id;
     private Long avgTotalVolume;
     private String calculationPrice;
     private Double change;
-    private Double changePercent;
+    @Setter(AccessLevel.NONE) private Double changePercent;
     private Double close;
     private String closeSource;
     private String closeTime;
@@ -53,13 +58,16 @@ public class StockInfo {
     private String openSource;
     private Double peRatio;
     private Double previousClose;
-    private Double previousVolume;
+    private Integer previousVolume;
     private String primaryExchange;
     private String symbol;
-    private String volume;
+    private Integer volume;
     private Double week52High;
     private Double week52Low;
     private Double ytdChange;
     private Boolean isUSMarketOpen;
 
+    public Double getChangePercent() {
+        return this.changePercent == null ? 0 : this.changePercent;
+    }
 }
