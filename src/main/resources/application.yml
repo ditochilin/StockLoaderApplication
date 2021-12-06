@@ -1,0 +1,10 @@
+cloud:
+  aws:
+    region:
+      static: eu-central-1
+      auto: false
+    credentials:
+      access-key: AKIARAF36GJQZLLXFWWK
+      secret-key: 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
+    end-point:
+      uri: https://sqs.eu-central-1.amazonaws.com/069113623137/stock-load

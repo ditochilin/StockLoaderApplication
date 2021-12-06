@@ -21,7 +21,7 @@ public class AsyncStockLoaderHelper {
 
     @Async("threadPoolCustomTaskExecutor")
     public CompletableFuture<StockInfoDto> getStockInfo(CompanyDto companyDto) {
-        log.info("Looking up at {} : {}", Thread.currentThread().getName(), companyDto.getSymbol());
+        log.info("Looking up at {} : {} - {}", Thread.currentThread().getName(), companyDto.getSymbol(), companyDto.getName());
         String url = String.format(appConfig.getStockInfoURI(),
                 companyDto.getSymbol());
         StockInfoDto stockInfoDto = restTemplate.getForObject(url, StockInfoDto.class);

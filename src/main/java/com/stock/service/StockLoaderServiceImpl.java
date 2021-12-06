@@ -24,7 +24,6 @@ public class StockLoaderServiceImpl implements StockLoaderService {
     private final AppConfig appConfig;
     private final AsyncStockLoaderHelper asyncStockLoaderHelper;
 
-
     @SneakyThrows
     public List<StockInfoDto> stockInfoCollectorHandler(List<CompanyDto> companies) {
         List<CompletableFuture<StockInfoDto>> futureList = new ArrayList<>();
@@ -60,8 +59,6 @@ public class StockLoaderServiceImpl implements StockLoaderService {
 
         String jsonCompanies = restTemplate.getForObject(appConfig.getCompaniesURI(), String.class);
         log.info("Companies loaded: "+ jsonCompanies.length());
-
-
 
         List<CompanyDto> companyDtoList = CompanyParser.parseCompanies(jsonCompanies);
         log.info("Companies were parsed: "+ companyDtoList.size());
