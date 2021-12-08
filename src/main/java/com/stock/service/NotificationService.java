@@ -1,5 +1,6 @@
 package com.stock.service;
 
+import com.amazonaws.util.json.Jackson;
 import com.stock.dto.NotificationDto;
 import com.stock.dto.internalTypes.Status;
 import com.stock.dto.internalTypes.Type;
@@ -9,6 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
 import org.springframework.stereotype.Service;
 
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 
 @Slf4j
@@ -19,19 +23,21 @@ public class NotificationService {
     private NotificationRepository notificationRepository;
 
     @SqsListener("stock-load")
-    public void loadMessageFromSQS(String message) {
-        log.info(">>>> Message from SQS : {}", message);
-        NotificationDto notification = NotificationDto.builder()
-                .status(Status.NEW)
-                .type(Type.INFO)
-                .created(LocalDate.now())
+    public void loadMessageFromSQS(String jsonMessage) {
+        log.info(">>>> Message from SQS : {}", jsonMessage);
+        NotificationDto notification = Jackson.fromJsonString(jsonMessage, NotificationDto.class);
+        notificationRepository.save(notification);
+    }
+
+    public NotificationDto createNotification(Status status, Type type, String message) {
+        return NotificationDto.builder()
+                .status(status)
+                .type(type)
+                .created(new Timestamp(System.nanoTime()))
                 .createdBy(message)
-                .modified(LocalDate.now())
+                .modified(new Timestamp(System.nanoTime()))
                 .modifiedBy(message)
                 .build();
-
-
-        notificationRepository.save(notification);
     }
 
 }

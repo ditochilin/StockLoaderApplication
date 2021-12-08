@@ -1,5 +1,6 @@
 package com.stock.service;
 
+import com.google.gson.JsonSyntaxException;
 import com.stock.config.AppConfig;
 import com.stock.dto.CompanyDto;
 import com.stock.dto.StockInfoDto;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -24,7 +26,6 @@ public class StockLoaderServiceImpl implements StockLoaderService {
     private final AppConfig appConfig;
     private final AsyncStockLoaderHelper asyncStockLoaderHelper;
 
-    @SneakyThrows
     public List<StockInfoDto> stockInfoCollectorHandler(List<CompanyDto> companies) {
         List<CompletableFuture<StockInfoDto>> futureList = new ArrayList<>();
 
@@ -53,7 +54,7 @@ public class StockLoaderServiceImpl implements StockLoaderService {
     }
 
     @Override
-    public List<CompanyDto> loadCompanies() {
+    public List<CompanyDto> loadCompanies() throws JsonSyntaxException, RestClientException {
         log.info("Starting load stock data...");
         RestTemplate restTemplate = new RestTemplate();
 

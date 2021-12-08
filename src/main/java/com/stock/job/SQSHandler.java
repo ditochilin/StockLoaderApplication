@@ -1,6 +1,11 @@
 package com.stock.job;
 
+import com.amazonaws.util.json.Jackson;
 import com.stock.dto.CompanyDto;
+import com.stock.dto.NotificationDto;
+import com.stock.dto.internalTypes.Status;
+import com.stock.dto.internalTypes.Type;
+import com.stock.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,15 +24,41 @@ public class SQSHandler {
 
     @Autowired
     private QueueMessagingTemplate queueMessagingTemplate;
+    @Autowired
+    private NotificationService notificationService;
 
     @Value("${cloud.aws.end-point.uri}")
     private String endPoint;
 
-    @Async  // TODO check possibility
-    public void sendMessageToSQS(List<CompanyDto> updatedCompanies) {
+    @Async
+    public void sendSuccessNotificationsToSQS(List<CompanyDto> updatedCompanies) {
         for (CompanyDto updatedCompany : updatedCompanies) {
-            queueMessagingTemplate.send(endPoint, MessageBuilder.withPayload(updatedCompany.getName()).build());
-            log.info("==== Message {} was send into SQS ====", updatedCompany.getName());
+            NotificationDto notification = createNotification(updatedCompany.getName(), Status.NEW, Type.INFO);
+            String jsonNotification = Jackson.toJsonString(notification);
+            queueMessagingTemplate.send(endPoint,
+                    MessageBuilder
+                            .withPayload(jsonNotification)
+                            .build());
+            log.info("==== Message {} was send into SQS ====", notification);
         }
+    }
+
+    @Async
+    public void sendErrorNotificationToSQS(String message) {
+        NotificationDto notification = createNotification(message, Status.NEW, Type.ERROR);
+        String jsonNotification = Jackson.toJsonString(notification);
+        queueMessagingTemplate.send(endPoint,
+                MessageBuilder
+                        .withPayload(jsonNotification)
+                        .build());
+        log.info("==== Error Message {} was send into SQS ====", notification);
+    }
+
+    private NotificationDto createNotification(String message, Status status, Type type) {
+        return notificationService.createNotification(
+          status,
+          type,
+          message
+        );
     }
 }

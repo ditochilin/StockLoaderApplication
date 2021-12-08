@@ -1,5 +1,6 @@
 package com.stock.job;
 
+import com.google.gson.JsonSyntaxException;
 import com.stock.dto.CompanyDto;
 import com.stock.dto.StockInfoDto;
 import com.stock.repository.CompanyRepository;
@@ -11,8 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -41,22 +44,22 @@ public class StockJob {
     public void loadStocks() {
         log.info("======================================== COUNTER: " + ++counter);
         log.info("Start getting companies");
-        List<CompanyDto> companies = stockLoaderService.loadCompanies();
-        List<StockInfoDto> stocks = stockLoaderService.stockInfoCollectorHandler(companies);
+        List<CompanyDto> companies = new ArrayList<>();
+        List<StockInfoDto> stocks = new ArrayList<>();
+        try {
+            companies = stockLoaderService.loadCompanies();
+            stocks = stockLoaderService.stockInfoCollectorHandler(companies);
+        } catch (RestClientException | JsonSyntaxException ex) {
+            log.error(ex.getMessage());
+            sqsHandler.sendErrorNotificationToSQS(ex.getMessage());
+            return;
+        }
 
         log.info("Loaded {} stockInfos entities.", stocks.size());
 
         updateCompaniesInDB(companies);
 
         log.info("All stockInfos saved in DataBase.", stocks.size());
-    }
-
-    private void clearDatabase() {
-        companyRepository.deleteAll();
-    }
-
-    private boolean isDatabaseEmpty() {
-        return companyRepository.count() == 0;
     }
 
     private void updateCompaniesInDB(List<CompanyDto> loadedCompanies) {
@@ -79,7 +82,7 @@ public class StockJob {
 
         if (!updatedCompanies.isEmpty()) {
             log.info("===============  Companies will be updated =================  : " + updatedCompanies.size());
-            sqsHandler.sendMessageToSQS(updatedCompanies);
+            sqsHandler.sendSuccessNotificationsToSQS(updatedCompanies);
             dbCompanies = companyRepository.saveAll(updatedCompanies);
         }
     }
